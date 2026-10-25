@@ -1,0 +1,307 @@
+# MASTER PROMPT — Build AwaazAI Backend from Scratch
+
+Act as a Senior Backend Engineer and Software Architect. Your task is to implement a complete, production-minded backend foundation for **AwaazAI**, a multilingual AI voice-agent platform.
+
+Do not just explain what needs to be done. Inspect the existing project, create or modify the actual files, install dependencies when permitted, run the application and tests, and fix implementation errors.
+
+## 1. Existing Project Architecture
+
+The project root is:
+
+`C:\Users\niran\Desktop\AwaazAI`
+
+It contains three separate directories:
+
+- `Backend/` — Main platform backend. You are responsible for implementing this directory.
+- `VoiceAgent/` — Separate AI brain responsible for LangChain, LangGraph, RAG, tool calling and custom streaming STT → LLM → TTS.
+- `Frontend/` — Existing React + Vite + JavaScript application.
+
+**Important:** Only implement the `Backend/` directory in this task. Do not restructure, delete, overwrite or modify `VoiceAgent/` or `Frontend/`.
+
+## 2. Mandatory Technology Stack
+
+Use the following technologies:
+
+- Python with FastAPI
+- Uvicorn for the ASGI server
+- Pydantic and Pydantic Settings for validation and configuration
+- SQLAlchemy 2.x for database access
+- Alembic for database migrations
+- PostgreSQL as the primary database
+- Psycopg 3 as the PostgreSQL driver
+- JWT-based access authentication with a secure password-hashing library
+- HTTPX for asynchronous HTTP requests
+- Pytest and HTTPX for automated API tests
+- Python logging for application logs
+
+Use stable, mutually compatible package versions. Check compatibility with the installed Python version before choosing dependencies.
+
+Do not introduce TypeScript, Node.js backend code, Docker, Prisma, LiveKit, Redis, or an additional frontend framework.
+
+Do not implement fake integrations or pretend an external service is connected when credentials are missing.
+
+## 3. First Inspect, Then Implement
+
+Before making changes:
+
+1. Inspect the current directory structure.
+2. Read the existing `requirements.txt`, Python files, tests and configuration files.
+3. Identify existing working code and preserve useful implementations.
+4. Check the installed Python version and available environment.
+5. Never overwrite an existing file blindly.
+6. Do not run destructive commands or delete existing project data.
+7. Explain any necessary modifications to existing files before applying risky changes.
+
+Reuse existing directories whenever possible. Create only the files and directories required for this backend.
+
+## 4. Required Backend Features
+
+### A. Application foundation
+
+Implement a properly structured FastAPI application with:
+
+- Application factory or clean application initialization.
+- API version prefix: `/api/v1`.
+- Root endpoint: `GET /`.
+- Health endpoint: `GET /health`.
+- Readiness endpoint: `GET /ready`.
+- Automatic OpenAPI documentation at `/docs`.
+- Startup and shutdown lifespan handling.
+- Centralized exception handling.
+- Request validation and consistent JSON error responses.
+- Configurable CORS origins.
+- Logging with useful request and error information.
+- A clear distinction between liveness and readiness checks.
+
+The application must start successfully even when PostgreSQL credentials are not configured. In that case, report database readiness accurately instead of falsely claiming the database is connected.
+
+### B. Configuration and secrets
+
+Create a validated settings system using environment variables.
+
+Provide:
+
+- `.env.example` containing documented placeholders.
+- `.gitignore` entries for `.env`, virtual environments, Python caches, logs and generated files.
+- Environment-based configuration for application name, environment, API prefix, CORS origins, PostgreSQL connection, JWT secret, token expiry and logging level.
+
+Never put actual secrets in source code, tests, logs, Git commits or frontend files.
+
+Fail safely when security-critical configuration is missing. Do not use a hardcoded production JWT secret.
+
+### C. Authentication
+
+Implement a minimal but functional authentication module:
+
+- User registration.
+- User login.
+- Password hashing using a suitable password-hashing library.
+- JWT access-token generation and verification.
+- Current authenticated user endpoint.
+- Protected-route dependency.
+- Input validation and duplicate-email handling.
+- Appropriate HTTP status codes and safe error messages.
+
+Never return password hashes or sensitive authentication details in API responses.
+
+Avoid insecure JWT algorithms, plaintext passwords, hardcoded credentials or exposing whether a password is correct through detailed error messages.
+
+### D. Database
+
+Implement PostgreSQL integration with SQLAlchemy 2.x:
+
+- Database engine and session management.
+- Declarative ORM base.
+- User model with a unique email and appropriate timestamps.
+- Database connection and readiness checks.
+- Alembic migration configuration and initial migration.
+- Safe transaction handling.
+- Clear database setup and migration instructions.
+
+Do not silently create or modify tables in production through application startup. Use Alembic migrations.
+
+If PostgreSQL is unavailable, the application should still start where practical, while database-dependent operations should fail gracefully with an appropriate error.
+
+Do not require Docker or Redis.
+
+### E. Agent management APIs
+
+AwaazAI will eventually support multiple configurable voice agents. Implement the basic platform APIs without embedding the complete AI voice engine in this backend.
+
+Create an agent configuration model containing suitable fields such as:
+
+- ID
+- Owner/user ID
+- Name
+- Description
+- System prompt
+- Language
+- Voice configuration
+- Active/inactive status
+- Creation and update timestamps
+
+Implement authenticated endpoints to:
+
+- Create an agent.
+- List the current user's agents.
+- Retrieve one agent owned by the current user.
+- Update an agent owned by the current user.
+- Delete an agent owned by the current user.
+
+Ensure users cannot read, modify or delete other users' agents. Validate inputs and use proper status codes.
+
+Do not store provider API keys in agent configuration responses or expose secrets to the frontend.
+
+### F. VoiceAgent service integration boundary
+
+The AI engine lives separately in `VoiceAgent/`.
+
+Implement a clean service-client abstraction in `Backend/` for future communication with the VoiceAgent service over HTTP.
+
+Requirements:
+
+- Configurable VoiceAgent service base URL.
+- Asynchronous HTTP client with timeouts.
+- A simple health-check or status-proxy interface if appropriate.
+- Clear handling of connection errors and timeouts.
+- No fabricated AI responses when the VoiceAgent service is unavailable.
+
+Do not implement STT, TTS, LLM streaming, RAG or LangGraph workflows inside this backend. Those responsibilities belong to the separate VoiceAgent service.
+
+Do not invent undocumented VoiceAgent endpoints. Clearly mark interfaces that need to be implemented when VoiceAgent is built.
+
+### G. API quality and security
+
+Implement:
+
+- Pydantic request and response schemas.
+- Appropriate HTTP status codes.
+- Consistent validation errors.
+- Authentication and ownership authorization.
+- Safe handling of untrusted input.
+- Database constraints and uniqueness checks.
+- Request timeouts for external calls.
+- No unnecessary global mutable state.
+- No leaked secrets or sensitive stack traces in production responses.
+
+Add rate limiting only if it can be implemented reliably without adding an unwanted Redis dependency; otherwise document the limitation and keep the design extensible.
+
+## 5. Suggested Minimal Structure
+
+Use this as a guide, not as a reason to create unnecessary folders:
+
+Backend/
+- app/
+  - main.py
+  - core/
+    - config.py
+    - security.py
+    - logging.py
+  - db/
+    - base.py
+    - session.py
+  - models/
+    - user.py
+    - agent.py
+  - schemas/
+    - auth.py
+    - user.py
+    - agent.py
+  - api/
+    - dependencies.py
+    - routes/
+      - health.py
+      - auth.py
+      - users.py
+      - agents.py
+  - services/
+    - voice_agent_client.py
+  - __init__.py
+- tests/
+- alembic/
+- alembic.ini
+- requirements.txt
+- .env.example
+- .gitignore
+- README.md
+
+Avoid creating a separate folder for every small component. Adapt the structure if the existing project already has a sensible organization.
+
+## 6. Automated Testing
+
+Write meaningful tests for:
+
+- Root, health and readiness endpoints.
+- Application startup without production secrets.
+- User registration validation.
+- Duplicate registration.
+- Password hashing.
+- Successful login and invalid credentials.
+- JWT verification.
+- Protected routes.
+- Agent CRUD operations.
+- Agent ownership authorization.
+- Validation failures.
+- VoiceAgent service timeout and unavailable-service handling.
+
+Tests must not depend on a real production database or real API keys. Use isolated test configuration and appropriate test database/session overrides.
+
+Do not weaken tests or disable failing tests just to achieve a passing result.
+
+## 7. Developer Experience
+
+Provide:
+
+- A clean `requirements.txt`.
+- Exact Windows PowerShell setup commands.
+- Virtual-environment activation instructions.
+- Environment-variable setup instructions.
+- PostgreSQL setup guidance for a local PostgreSQL installation or hosted provider.
+- Alembic migration commands.
+- Commands to run the backend.
+- Commands to run tests.
+- Example API requests for registration, login, current user and agent CRUD.
+- A README documenting architecture, configuration, endpoints and troubleshooting.
+
+Keep the implementation understandable for a developer learning backend engineering.
+
+Use clear names, type hints where appropriate, short functions and useful comments. Avoid unnecessary abstractions and premature microservices.
+
+## 8. Execution Workflow
+
+Work in this order:
+
+1. Inspect existing files and dependencies.
+2. Propose a concise implementation plan.
+3. Implement the application foundation and configuration.
+4. Implement database models and migrations.
+5. Implement authentication and authorization.
+6. Implement agent management APIs.
+7. Implement the VoiceAgent service-client boundary.
+8. Add automated tests.
+9. Install dependencies if authorized and compatible.
+10. Run tests and fix actual failures.
+11. Start the server and verify endpoints where possible.
+12. Update the README with the exact commands that work.
+
+Do not stop after creating a plan or showing example snippets. Continue through implementation and verification using the available coding environment.
+
+If a required external dependency, PostgreSQL instance, credential or tool is unavailable, clearly state what could not be verified and provide the precise next step. Never claim success without evidence.
+
+## 9. Definition of Done
+
+The task is complete only when:
+
+- The backend files are actually implemented.
+- Existing Frontend and VoiceAgent files remain untouched.
+- Dependencies are compatible with the selected Python environment.
+- The application starts successfully.
+- Health endpoints behave correctly.
+- Authentication and agent CRUD are implemented.
+- Ownership authorization is tested.
+- Tests pass, or every remaining failure is clearly reported.
+- Database migrations and setup instructions are documented.
+- No secrets are committed or hardcoded.
+- The final response summarizes files created, commands executed, tests run and outstanding limitations.
+
+Begin by inspecting the existing project. Then implement the backend directly in the current `Backend/` directory.

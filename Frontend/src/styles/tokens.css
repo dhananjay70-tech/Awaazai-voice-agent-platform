@@ -1,0 +1,86 @@
+/* Design tokens: every page and component reads from these variables. */
+:root {
+  /* Surfaces */
+  --color-bg: #101010;
+  --color-bg-raised: #171717;
+  --color-surface: #1c1c1c;
+  --color-surface-2: #232323;
+  --color-surface-3: #2b2b2b;
+  --color-overlay: rgb(0 0 0 / 70%);
+
+  /* Text */
+  --color-text: #ededed;
+  --color-text-secondary: #b0b0b0;
+  --color-text-muted: #8f8f8f;
+
+  /* Accent (teal / emerald) */
+  --color-accent: #14b8a6;
+  --color-accent-hover: #2dd4bf;
+  --color-accent-strong: #10b981;
+  --color-accent-soft: rgb(20 184 166 / 14%);
+  --color-on-accent: #031b18;
+
+  /* Borders and focus */
+  --color-border: #303030;
+  --color-border-strong: #424242;
+  --color-focus: #5eead4;
+  --focus-ring: 0 0 0 3px rgb(94 234 212 / 45%);
+
+  /* Status */
+  --color-success: #34d399;
+  --color-success-soft: rgb(52 211 153 / 14%);
+  --color-warning: #fbbf24;
+  --color-warning-soft: rgb(251 191 36 / 13%);
+  --color-error: #f87171;
+  --color-error-soft: rgb(248 113 113 / 13%);
+  --color-info: #60a5fa;
+  --color-info-soft: rgb(96 165 250 / 13%);
+
+  /* Typography */
+  --font-sans: 'Inter', system-ui, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: ui-monospace, 'Cascadia Code', 'SFMono-Regular', Menlo, Consolas, monospace;
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.375rem;
+  --text-2xl: 1.75rem;
+  --text-3xl: clamp(1.9rem, 1.2rem + 2.4vw, 2.75rem);
+  --text-display: clamp(2.4rem, 1.4rem + 4vw, 4rem);
+
+  /* Spacing */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  --space-8: 72px;
+  --space-9: 112px;
+
+  /* Radius */
+  --radius-sm: 8px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 18px;
+  --radius-pill: 999px;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / 30%);
+  --shadow-md: 0 8px 24px rgb(0 0 0 / 28%);
+  --shadow-lg: 0 24px 60px rgb(0 0 0 / 40%);
+
+  /* Motion */
+  --transition-fast: 120ms ease;
+  --transition: 200ms cubic-bezier(0.2, 0.7, 0.2, 1);
+
+  /* Layout */
+  --width-content: 1160px;
+  --width-narrow: 720px;
+  --width-form: 440px;
+  --sidebar-width: 240px;
+  --sidebar-collapsed: 72px;
+  --header-height: 64px;
+  --touch-target: 44px;
+}

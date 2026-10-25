@@ -1,0 +1,220 @@
+# AwaazAI Phase 3A — Streaming Gemini Responses
+
+Implement Phase 3A in my existing AwaazAI project. Phase 1 and Phase 2 are complete, and `POST /chat` already returns real Gemini responses.
+
+## 1. Existing project and constraints
+
+Project root:
+`C:\Users\niran\Desktop\AwaazAI`
+
+Service directory:
+`VoiceAgent/`
+
+Stack:
+- Python 3.14.3
+- FastAPI
+- Existing Gemini integration using `google-genai`
+- Preferred configured model is read from `GEMINI_MODEL` in the existing local `.env`
+- VoiceAgent runs locally on port 8001
+
+Before editing, inspect the actual Phase 1 and Phase 2 implementation, configuration, routes, Gemini provider, session manager, tests, and README. Run the existing test suite and record the baseline.
+
+Strict requirements:
+- Modify only files inside `VoiceAgent/`.
+- Preserve existing `POST /chat` behavior and all Phase 1/2 functionality.
+- Do not overwrite or recreate `.env`.
+- Never reveal, log, or commit the Gemini API key.
+- Do not ask me to paste secrets.
+- No TypeScript, Docker, LiveKit, Redis, Prisma, or unnecessary dependencies.
+- Do not implement STT, TTS, microphone access, database persistence, RAG, or frontend changes in this phase.
+- Do not replace the existing Gemini SDK with another provider or invent unsupported SDK methods.
+
+## 2. Implement a streaming endpoint
+
+Add a new endpoint:
+
+`POST /chat/stream`
+
+Use Server-Sent Events (SSE) over HTTP if supported cleanly by the existing FastAPI architecture.
+
+Example request:
+
+{
+  "message": "Explain AI agents in simple Hinglish.",
+  "session_id": "stream-demo-001",
+  "language": "hinglish"
+}
+
+The response must stream events progressively instead of waiting for the entire Gemini response.
+
+Use a documented event format such as:
+
+- `start`: session/request metadata
+- `token`: a generated text chunk
+- `done`: completion metadata
+- `error`: a safe error code and request ID
+
+Example SSE event format:
+
+event: start
+data: {"session_id":"stream-demo-001","model":"configured-model"}
+
+event: token
+data: {"text":"AI agents"}
+
+event: token
+data: {"text":" can perform tasks..."}
+
+event: done
+data: {"session_id":"stream-demo-001"}
+
+These are illustrative events; implement a consistent format and document the actual contract.
+
+Requirements:
+- Use the existing Gemini provider abstraction and configured model.
+- Use the actual supported streaming API from the installed `google-genai` version.
+- Send chunks as soon as they become available.
+- Do not buffer the entire generated answer before emitting token events.
+- Set the appropriate SSE content type and anti-buffering headers where applicable.
+- Ensure the existing security headers and request ID behavior are preserved.
+- Keep `/health` and `POST /chat` working unchanged.
+- Validate message, session ID, and language using the existing schemas where appropriate.
+- Keep system instructions and language behavior consistent with Phase 2.
+
+## 3. Preserve conversation history correctly
+
+Integrate streaming with the existing bounded in-memory session manager.
+
+Requirements:
+- Use the same session when the client sends an existing `session_id`.
+- Maintain isolation between sessions.
+- Ensure concurrent requests for the same session cannot corrupt history.
+- Do not add a partial or failed assistant response to history.
+- Only commit the completed assistant response after successful generation.
+- Handle empty provider output safely.
+- Reuse existing history limits, expiration, and eviction policies.
+- Do not introduce a second independent session store.
+
+Inspect the existing locking design carefully. Do not hold a session lock indefinitely if a client disconnects or Gemini hangs.
+
+## 4. Cancellation and cleanup
+
+Handle HTTP client disconnects and generator cancellation correctly.
+
+Requirements:
+- If a client disconnects while receiving the stream, cancel the upstream Gemini generation when supported by the SDK.
+- Release session locks and other resources in all success, error, timeout, and cancellation paths.
+- Do not leave background tasks running unnecessarily.
+- Apply a configurable generation timeout.
+- Avoid unbounded buffering or unbounded concurrent generations.
+- If the SDK does not support true upstream cancellation, document the limitation honestly and implement the safest available cleanup.
+- Do not claim cancellation works unless it has been verified.
+
+## 5. Measure latency
+
+Add lightweight, privacy-safe timing measurements for:
+
+- Request start
+- Time to first generated text chunk (TTFT)
+- Total generation time
+- Whether generation completed, failed, timed out, or was cancelled
+
+Requirements:
+- Use a monotonic clock for duration measurements.
+- Never log prompts, response text, API keys, or session IDs.
+- Keep metrics bounded and avoid adding a new metrics platform.
+- Include useful timing metadata in the final `done` event if appropriate.
+- Do not expose sensitive internal details to clients.
+
+## 6. Error handling
+
+Reuse Phase 2's standardized error model and existing error codes wherever possible.
+
+Handle:
+- Missing Gemini API key
+- Unavailable or retired model
+- Provider authentication failure
+- Quota/rate-limit exhaustion
+- Provider timeout
+- Network errors
+- Empty/malformed streaming chunks
+- Unexpected provider failures
+- Client disconnect or cancellation
+- Invalid request body
+
+Before the SSE response begins, use the appropriate HTTP status code if the request cannot start. After streaming has started, send a safe SSE `error` event when possible, then terminate the stream.
+
+Never send a fake successful reply. Never include API keys, stack traces, raw provider errors, or user prompts in error events.
+
+## 7. Concurrency and resource limits
+
+Review the existing session locking and provider call architecture before implementation.
+
+Requirements:
+- Same-session conversations must be serialized safely.
+- Different sessions should be able to progress concurrently within a reasonable configured limit.
+- Bound the number of concurrent Gemini generations.
+- Prevent session-lock leaks, semaphore leaks, and task leaks.
+- Avoid blocking the FastAPI event loop.
+- Use the installed SDK's supported async streaming interface where available.
+- Keep resource limits configurable with safe defaults.
+
+## 8. Testing requirements
+
+Add deterministic offline tests using mocked provider streams. The normal test suite must not require internet access or a real API key.
+
+Test at least:
+
+1. Successful stream emits `start`, multiple `token` events, and `done` in order.
+2. Tokens are delivered progressively rather than emitted as one buffered response.
+3. Existing `POST /chat` remains functional.
+4. Existing Phase 1/2 tests continue to pass.
+5. Session history is preserved after successful streaming.
+6. Failed or cancelled generations are not added to history.
+7. Different sessions remain isolated.
+8. Same-session concurrent requests are serialized correctly.
+9. Empty stream handling.
+10. Missing API key and provider authentication errors.
+11. Quota/rate-limit failures.
+12. Model unavailable errors.
+13. Provider timeout.
+14. Client disconnect/cancellation cleanup.
+15. Locks and concurrency limits are released after errors.
+16. Request IDs and security headers on streaming responses.
+17. Safe SSE error events after the response starts.
+18. TTFT and total-duration measurements use deterministic tests.
+19. Invalid input and oversized messages.
+20. No sensitive prompt, token, session ID, or key leakage in logs.
+
+Use short test timeouts to prevent deadlocks. Do not make ordinary unit tests call Gemini.
+
+Add an optional real-Gemini streaming smoke test that is explicitly opt-in. It must never print credentials or sensitive conversation data. Do not execute paid API calls automatically during normal tests.
+
+## 9. Documentation
+
+Update the README with:
+- `POST /chat/stream` request and response examples
+- SSE event names and JSON payloads
+- How to test the stream locally
+- Cancellation and timeout behavior
+- TTFT measurement
+- Session/history behavior
+- How streaming differs from the existing non-streaming `/chat`
+- Current limitations
+
+Do not modify the Frontend or Backend.
+
+## 10. Verification and final report
+
+After implementation:
+
+1. Run the complete existing and new offline test suite.
+2. Fix failures caused by the changes.
+3. Confirm the original health endpoint and non-streaming chat still work.
+4. Run a local streaming test and verify that multiple chunks arrive progressively.
+5. Run the opt-in real Gemini streaming smoke test only if explicitly configured and safe.
+6. Inspect the final diff for unrelated changes, secrets, and debug output.
+7. Report actual test counts and any skipped tests.
+8. Report whether real Gemini streaming was tested and whether upstream cancellation was actually verified.
+
+Do not claim any test passed unless you executed it. Implement the feature rather than stopping after a plan, and keep the changes minimal and secure.

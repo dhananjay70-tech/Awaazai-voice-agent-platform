@@ -1,0 +1,34 @@
+# AwaazAI Phase 3D — Native Hinglish, Hindi and English Streaming STT
+
+Inspect the existing `VoiceAgent/` codebase and improve the current Deepgram streaming STT implementation to handle English, Hindi, and naturally code-switched Hinglish.
+
+## Important constraints
+- Preserve the existing Deepgram STT integration and `/stt/stream` WebSocket contract unless a change is necessary and documented.
+- Do not break Gemini chat, Gemini streaming, Sarvam TTS, or Deepgram TTS.
+- Do not add LiveKit, Docker, TypeScript, or unnecessary dependencies.
+- Do not modify or overwrite `.env`, and never print secrets.
+- Verify all provider parameters against current official Deepgram documentation. Do not invent language codes or claim unsupported capabilities.
+
+## Tasks
+
+1. Inspect `app/stt/`, `app/routes/stt.py`, configuration, and existing STT tests.
+2. Verify the correct Deepgram model and supported language settings for Hindi, English, and code-switching. Determine whether the current `language=multi` configuration actually supports the desired Hindi-English combination.
+3. Keep the existing English and Hindi modes working. Add or correct a Hinglish/code-switching mode only if supported by the selected model and API.
+4. Support both Devanagari Hindi and Roman-script Hindi/Hinglish where the provider supports them. Do not silently translate or rewrite recognized speech.
+5. Preserve streaming partial and final transcripts, timeouts, cancellation, concurrency limits, origin checks, and safe logging.
+6. Add mocked offline tests for English, Hindi, and Hinglish configuration and transcript handling.
+7. Add optional real-provider smoke tests for:
+   - English speech
+   - Hindi speech
+   - Romanized Hinglish with Hindi-English code-switching
+   - Devanagari Hindi mixed with English words
+8. Use short, natural test phrases. Keep real API tests opt-in and avoid running billable tests automatically.
+9. Report clearly which languages and scripts were actually tested against the real Deepgram API. Do not claim Hinglish works based only on mocked tests.
+
+## Acceptance criteria
+- Existing tests remain green.
+- The client can select the appropriate STT mode without breaking existing clients.
+- Partial and final transcript events remain compatible with the current WebSocket protocol.
+- The report explains any Deepgram limitations, including whether Romanized Hinglish is reliably recognized and whether a different STT provider is required.
+
+Make the smallest reliable changes and report modified files, configuration changes, test results, and any remaining limitations.

@@ -1,0 +1,121 @@
+# AwaazAI Phase 3B — Streaming Speech-to-Text (STT)
+
+Continue my existing AwaazAI project and implement Phase 3B in `VoiceAgent/` only.
+
+## Existing implementation
+
+Phase 1: FastAPI service foundation and health endpoint.
+
+Phase 2: Gemini-powered `POST /chat`, bounded in-memory sessions and conversation history.
+
+Phase 3A: `POST /chat/stream` using Server-Sent Events, progressive Gemini text generation, cancellation handling, generation limits, and latency metrics.
+
+The latest reported offline suite has 392 passing tests and 3 skipped tests. Inspect the actual code and run the current tests before making changes.
+
+## Strict constraints
+
+- Modify only `VoiceAgent/`.
+- Do not break `/health`, `/chat`, or `/chat/stream`.
+- Preserve all existing session, concurrency, cancellation, error-handling, request-ID, and security-header behavior.
+- Do not overwrite or recreate `.env`.
+- Never ask me to paste secrets or log API keys.
+- No LiveKit, Docker, TypeScript, Redis, Prisma, or unnecessary dependencies.
+- Do not implement text-to-speech in this phase.
+- Do not modify Backend or Frontend.
+- Do not claim tests pass unless you actually ran them.
+
+## 1. Inspect and propose the STT design
+
+First inspect the existing configuration, service architecture, SDKs, test conventions, and README.
+
+Choose an appropriate speech-to-text provider that supports streaming or incremental transcription and can support Hindi and English. Evaluate Hinglish support honestly: do not promise perfect Hinglish recognition without testing it.
+
+Prefer a provider with a documented Python SDK and a clear authentication/configuration model. Explain the choice and its trade-offs before implementation.
+
+Do not assume Gemini's text-generation API accepts microphone audio as a live streaming transcription API. Verify the selected provider's actual supported API and installed SDK.
+
+Keep the STT provider separate from the existing Gemini text-generation provider.
+
+If the selected provider requires a new API key, document its environment variable and update `.env.example` with a safe placeholder only. Do not create, overwrite, or print `.env`, and do not require me to reveal secrets in chat.
+
+## 2. Define the streaming transcription interface
+
+Design an interface that can accept audio incrementally and produce transcription events.
+
+Events should distinguish:
+- Partial/interim transcript
+- Final transcript
+- Session or stream completion
+- Safe errors
+
+Each event must have a documented schema. Avoid sending the same partial transcript repeatedly as if it were new text.
+
+Use a transport appropriate for bidirectional audio streaming. Evaluate WebSockets for browser microphone input because audio must flow from client to server while transcript events flow back. Keep the existing SSE endpoint for LLM text generation unchanged.
+
+Do not introduce a fake endpoint that pretends to process audio without a real STT provider.
+
+## 3. Audio and session safety
+
+- Validate audio encoding, sample rate, channel count, and chunk size according to the selected provider's actual requirements.
+- Apply limits to audio duration, total bytes, chunk size, concurrent sessions, and idle time.
+- Support graceful client disconnect and provider cancellation.
+- Clean up provider connections, tasks, and session resources on success, error, timeout, or cancellation.
+- Never log raw audio, transcripts, API keys, or sensitive provider response details.
+- Avoid buffering the entire recording in memory.
+- Keep audio processing asynchronous where supported.
+- Use a distinct STT stream/session identifier rather than accidentally mixing it with the text-chat history.
+- Do not save audio or transcripts to disk or a database.
+
+## 4. Language handling
+
+Support the provider's documented language options for Hindi and English.
+
+For Hinglish, choose a documented multilingual/automatic language detection mode if available. If the provider cannot reliably support code-switching, document the limitation and provide a configurable language selection or fallback.
+
+Do not translate the transcript unless explicitly requested. STT should transcribe what the speaker said, not rewrite the meaning.
+
+## 5. Testing
+
+Build offline tests using mocked provider events. The normal test suite must not require a paid API key or internet access.
+
+Test:
+- Partial and final transcript events
+- Correct event ordering
+- Hindi and English configuration
+- Hinglish/automatic-language behavior where supported
+- Invalid audio metadata
+- Oversized audio chunks and total stream limits
+- Idle and total timeouts
+- Client disconnect and cancellation
+- Provider errors and malformed events
+- Concurrent stream limits
+- Resource cleanup and lock/semaphore release
+- Request IDs and security headers
+- No sensitive content in logs
+- Regression tests for all existing Phase 1, Phase 2, and Phase 3A behavior
+
+Add a real-provider smoke test only if it can be explicitly enabled. Never run paid tests automatically.
+
+## 6. Integration boundaries
+
+Do not automatically connect STT output to Gemini yet unless the interface remains cleanly separable and the implementation is explicitly tested.
+
+This phase's main objective is reliable, incremental speech transcription. Phase 3C will handle TTS, and a later integration phase can connect the microphone → STT → Gemini streaming → TTS pipeline.
+
+## 7. Documentation and verification
+
+Update the README with:
+- Provider choice and limitations
+- Environment variable names
+- Audio format requirements
+- Stream protocol and event schemas
+- Local testing instructions
+- Supported languages
+- Timeout and cancellation behavior
+- Security and in-memory limitations
+
+Run the complete offline test suite and fix regressions.
+
+In your final report, list files changed, actual test counts, whether real STT was tested, setup requirements, and known limitations.
+
+Do not stop at a plan if the design is feasible with the current environment. If a new provider credential is required but unavailable, implement the safe, mock-tested provider abstraction and clearly identify what remains blocked.
